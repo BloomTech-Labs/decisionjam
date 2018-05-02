@@ -4,17 +4,20 @@ const server = express();
 const mongoose = require('mongoose');
 const User = require('./db/UserModel.js');
 
+const STATUS_USER_ERROR = 422;
+const STATUS_SERVER_ERROR = 500;
+const STATUS_OKAY = 200;
 
 server.get ('/', function (req, res) {
-    res.status(200).json ({message: 'API running'});
+    res.status(STATUS_OKAY).json ({message: 'API running'});
 });
 
 server.get ('/users', function (req, res) {
    User.find({},(err, users)=> {
        if (err) {
-        res.status(401).json({error:'Something went wrong, please try again'});
+        res.status(STATUS_USER_ERROR).json({error:'Something went wrong, please try again'});
        } else {
-           res.status(200).json(users);
+           res.status(STATUS_OKAY).json(users);
        }
    })
 });
