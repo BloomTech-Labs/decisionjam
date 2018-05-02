@@ -1,3 +1,4 @@
+const bodyParser = require('body-parser');
 const express = require ('express');
 const server = express();
 const mongoose = require('mongoose');
@@ -11,7 +12,7 @@ server.get ('/', function (req, res) {
 server.get ('/users', function (req, res) {
    User.find({},(err, users)=> {
        if (err) {
-
+        res.status(401).json({error:'Something went wrong, please try again'});
        } else {
            res.status(200).json(users);
        }
