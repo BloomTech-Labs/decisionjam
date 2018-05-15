@@ -84,7 +84,6 @@ server.get('/api/decision/:id', function(req, res) {
 
 server.put('/api/decision/:id/answer', function(req,res) {
   const id = req.params.id;
-  console.log(req.body);
   const answer = req.body.answer; //TODO add with the user id right now only string
   Decision.findOne({_id: id})
           .then ((decision) => {
@@ -101,9 +100,38 @@ server.put('/api/decision/:id/answer', function(req,res) {
                  (err) => res.status(STATUS_NOT_FOUND).json({error: "Decision with id " + id + " not found"}));          
 })
 
-
-
-
+server.put('/api/decision/answer/:id/vote', function(req, res) {
+  const answerId = req.params.id;
+  const vote = req.query.vote;
+  const userId = req.headers['authorization']; //TODO use passport here to decode jwt token
+  if(vote === undefined || (vote.toUpperCase() !== 'YES' && vote.toUpperCase() !== 'NO')) {
+    res.status(STATUS_USER_ERROR).json({error: "Decision must be yes or no"});
+  } else {
+        Decision.findOne({'answers._id' : answerId})
+            .then((decision) => {
+              let answers = decision.answers;
+              const voteForAnswer = answers.find(x =>  (String(x._id) === answerId));
+              const upVotes = voteForAnswer.upVotes;
+              const downVotes = voteForAnswer.downVotes;
+              var voted = false;
+              if(vote.toUpperCase() === 'YES' && upVotes.find(x => x === userId) === undefined) {
+                upVotes.push(userId);
+                voted = true;
+              } else if (vote.toUpperCase() === 'NO' && downVotes.find(x => x === userId) === undefined){
+                downVotes.push(userId);
+                voted = true;
+              }
+              if(voted) {
+                decision.save().then(d => res.status(STATUS_OKAY).json(d), 
+                                     err => res.status(STATUS_SERVER_ERROR).json({error: err}));
+              } else {
+                res.status(STATUS_OKAY).json({status: "User already voted not allowed to vote again"});
+              }
+            }, 
+            (err) => res.status(STATUS_NOT_FOUND).json({error: "answer with id " + answerId + " not found"}))
+            .catch(e => console.log(e));
+  }
+}) 
 
 //gotta convert ugly callback code to beautiful promises
 //http://erikaybar.name/using-es6-promises-with-mongoosejs-queries/
