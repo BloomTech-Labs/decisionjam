@@ -84,7 +84,6 @@ server.get('/api/decision/:id', function(req, res) {
 
 server.put('/api/decision/:id/answer', function(req,res) {
   const id = req.params.id;
-  console.log(req.body);
   const answer = req.body.answer; //TODO add with the user id right now only string
   Decision.findOne({_id: id})
           .then ((decision) => {
@@ -123,8 +122,6 @@ server.put('/api/decision/answer/:id/vote', function(req, res) {
                 voted = true;
               }
               if(voted) {
-                const idx = decision.answers.findIndex(x => x._id === answerId);
-                decision.answers[idx] = voteForAnswer;
                 decision.save().then(d => res.status(STATUS_OKAY).json(d), 
                                      err => res.status(STATUS_SERVER_ERROR).json({error: err}));
               } else {
@@ -135,11 +132,6 @@ server.put('/api/decision/answer/:id/vote', function(req, res) {
             .catch(e => console.log(e));
   }
 }) 
-
-
-
-
-
 
 //gotta convert ugly callback code to beautiful promises
 //http://erikaybar.name/using-es6-promises-with-mongoosejs-queries/
