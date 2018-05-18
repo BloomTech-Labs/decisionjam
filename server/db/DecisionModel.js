@@ -23,7 +23,7 @@ const DecisionSchema =  new mongoose.Schema({
         upVotes: [String],
         downVotes: [String]}
     ],
-    publicReveal: {
+    voteOver: {
         type: Boolean,
         default : false,
     },

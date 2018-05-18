@@ -19,7 +19,7 @@ class Decision extends Component {
       decision: "",
       answersArray: [],
       decisionCreatorId: "",
-      publicReveal : false,
+      voteOver : false,
       userId :'',
       publicRevalButtonText: 'reveal',
     };
@@ -37,7 +37,7 @@ class Decision extends Component {
           answersArray: res.data[0].answers.map(x => x.answerText),
           decisionCreatorId: res.data[0].decisionCreatorId,
           userId : res.data[0].userId,
-          publicReveal : res.data[0].publicReveal,
+          voteOver : res.data[0].voteOver,
         });
         // console.log(
         //   "res.data[0].answers.map(x => x.answerText)",
@@ -75,7 +75,7 @@ class Decision extends Component {
       postIsActive: false,
       voteIsActive: false,
       revealIsActive: true,
-      publicReveal : true // now the general public can see the Reveal page but 
+      voteOver : true // now the general public can see the Reveal page but 
                           // Todo :i haven't saved this to the database, need help on this, pat will
                           // create a put decison route and update route url here . we have to trigger
                           // an axios request to set this decision public reveal to true
@@ -90,7 +90,7 @@ class Decision extends Component {
           postIsActive: false,
           voteIsActive: false,
           revealIsActive: true,
-          publicReveal : true,
+          voteOver : true,
           publicRevalButtonText : 'sneak peek'
         });
 
@@ -100,7 +100,7 @@ class Decision extends Component {
           postIsActive: false,
           voteIsActive: false,
           revealIsActive: true,
-          publicReveal : false,  
+          voteOver : false,  
           publicRevalButtonText : 'reveal',
         });
       }
@@ -111,7 +111,7 @@ class Decision extends Component {
         postIsActive: false,
         voteIsActive: false,
         revealIsActive: true,
-        publicReveal : true // now the general public can see the Reveal page but 
+        voteOver : true // now the general public can see the Reveal page but 
                             // Todo :i haven't saved this to the database, need help on this, pat will
                             // create a put decison route and update route url here . we have to trigger
                             // an axios request to set this decision public reveal to true
@@ -159,11 +159,11 @@ class Decision extends Component {
             {this.state.publicRevalButtonText}
           </button>
           <button
-            disabled={!((this.state.decisionCreatorId == this.state.userId) || this.state.publicReveal)} // check decision creator id is
+            disabled={!((this.state.decisionCreatorId == this.state.userId) || this.state.voteOver)} // check decision creator id is
                 // decision createor the same as the person logged in or it's already been publicly revealed and
                 // saved on the database as publiclyRevealed
                 // todo , when decision creator clicks on reveal for the first time , make them
-                // confirm via popup to allow the reveal and then set state on publicReveal
+                // confirm via popup to allow the reveal and then set state on voteOver
             className={
               this.state.revealIsActive ? "active-tab" : "inactive-tab"
             }
