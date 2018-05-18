@@ -18,7 +18,10 @@ class Decision extends Component {
       decisionCode: props.match.params.id,
       decision: "",
       answersArray: [],
-      decisionCreatorId: ""
+      decisionCreatorId: "",
+      voteOver : false,
+      userId :'',
+      publicRevalButtonText: 'reveal',
     };
   }
 
@@ -32,7 +35,9 @@ class Decision extends Component {
         this.setState({
           decision: res.data[0].decisionText,
           answersArray: res.data[0].answers.map(x => x.answerText),
-          decisionCreatorId: res.data[0].decisionCreatorId
+          decisionCreatorId: res.data[0].decisionCreatorId,
+          userId : res.data[0].userId,
+          voteOver : res.data[0].voteOver,
         });
         // console.log(
         //   "res.data[0].answers.map(x => x.answerText)",
@@ -69,8 +74,49 @@ class Decision extends Component {
       renderPage: "reveal",
       postIsActive: false,
       voteIsActive: false,
-      revealIsActive: true
+      revealIsActive: true,
+      voteOver : true // now the general public can see the Reveal page but 
+                          // Todo :i haven't saved this to the database, need help on this, pat will
+                          // create a put decison route and update route url here . we have to trigger
+                          // an axios request to set this decision public reveal to true
     });
+  };
+
+  onRevealButtonClick1 = () => {
+    if (this.state.decisionCreatorId == this.state.userId) {
+      if(this.publicRevalButtonText == 'reveal') {
+        this.setState({
+          renderPage: "reveal",
+          postIsActive: false,
+          voteIsActive: false,
+          revealIsActive: true,
+          voteOver : true,
+          publicRevalButtonText : 'sneak peek'
+        });
+
+      } else if (this.state.publicRevalButtonText == 'sneak peek') {
+        this.setState({
+          renderPage: "reveal",
+          postIsActive: false,
+          voteIsActive: false,
+          revealIsActive: true,
+          voteOver : false,  
+          publicRevalButtonText : 'reveal',
+        });
+      }
+
+    } else {  // it's a normal user show them reveal button 
+      this.setState({
+        renderPage: "reveal",
+        postIsActive: false,
+        voteIsActive: false,
+        revealIsActive: true,
+        voteOver : true // now the general public can see the Reveal page but 
+                            // Todo :i haven't saved this to the database, need help on this, pat will
+                            // create a put decison route and update route url here . we have to trigger
+                            // an axios request to set this decision public reveal to true
+      });
+    }
   };
 
   render() {
@@ -96,11 +142,28 @@ class Decision extends Component {
           <button
             className={this.state.voteIsActive ? "active-tab" : "inactive-tab"}
             onClick={this.onVoteButtonClick}
+            // if there are no answers , there is nothing to vote on
+            disabled= {!this.state.answersArray}  //answersArray empty, null or lenght 0 is false
           >
             Vote
           </button>
           <button
-            disabled={!this.state.decisionCreatorId}
+            disabled={!(this.state.decisionCreatorId == this.state.userId)} // check decision creator id is
+                // decision createor the same as the person logged in or it's already been publicly revealed and
+                
+            className={
+              this.state.revealIsActive ? "active-tab" : "inactive-tab"
+            }
+            onClick={this.onRevealButtonClick1}
+          >
+            {this.state.publicRevalButtonText}
+          </button>
+          <button
+            disabled={!((this.state.decisionCreatorId == this.state.userId) || this.state.voteOver)} // check decision creator id is
+                // decision createor the same as the person logged in or it's already been publicly revealed and
+                // saved on the database as publiclyRevealed
+                // todo , when decision creator clicks on reveal for the first time , make them
+                // confirm via popup to allow the reveal and then set state on voteOver
             className={
               this.state.revealIsActive ? "active-tab" : "inactive-tab"
             }

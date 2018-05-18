@@ -23,6 +23,10 @@ const DecisionSchema =  new mongoose.Schema({
         upVotes: [String],
         downVotes: [String]}
     ],
+    voteOver: {
+        type: Boolean,
+        default : false,
+    },
 
     createdOn: {
         type: Date,
