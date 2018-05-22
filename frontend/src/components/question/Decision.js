@@ -19,8 +19,8 @@ class Decision extends Component {
       decision: "",
       answersArray: [],
       decisionCreatorId: "",
-      currentLoggedInUserId : "",
-      voteOver : false,
+      currentLoggedInUserId: "",
+      voteOver: false,
       headers: {
         "Content-Type": "application/json",
         Authorization: localStorage.getItem("token")
@@ -54,7 +54,7 @@ class Decision extends Component {
         // console.log("erorr", error.response.data.error);
         this.setState({ decision: error.response.data.error });
       });
-    console.log('decisionCreatorId is ' + this.state.decision);
+    // console.log('decisionCreatorId is ' + this.state.decision);
   }
 
   onPostButtonClick = () => {
@@ -64,7 +64,6 @@ class Decision extends Component {
       voteIsActive: false,
       revealIsActive: false
     });
-    
   };
 
   onVoteButtonClick = () => {
@@ -82,19 +81,21 @@ class Decision extends Component {
       postIsActive: false,
       voteIsActive: false,
       revealIsActive: true,
-      voteOver: true,
+      voteOver: true
     });
-    
+
     //todo wrap this axios request in a conditional to stop the update
     // request from firing on every reveal button click , we only need it to reveal once
     // conditional would be ((decisionid == currentLoggedInUserId) && this.state.voteOver == false )
     //but first want to get this working and test
 
-
     const voteBodyObject = { voteOver: this.state.voteOver };
     // update the decision making sure the vote is over
     axios
-      .put(`${ROOT_URL}/api/decision/${this.state.decisionCode}/voteOverUpdate`, voteBodyObject)
+      .put(
+        `${ROOT_URL}/api/decision/${this.state.decisionCode}/voteOverUpdate`,
+        voteBodyObject
+      )
       .then(res => {
         console.log("res.data put", res.data);
       })
@@ -127,14 +128,21 @@ class Decision extends Component {
             className={this.state.voteIsActive ? "active-tab" : "inactive-tab"}
             onClick={this.onVoteButtonClick}
             // if there are no answers or vote is over , there is nothing to vote on
-            disabled= {!(this.state.answersArray || this.state.voteOver )}  //answersArray empty, null or lenght 0 is false
+            disabled={!(this.state.answersArray || this.state.voteOver)} //answersArray empty, null or lenght 0 is false
           >
             Vote
           </button>
           <button
-
             //disabled if (decisionCreatorid or Logged in userid empty or if the id's don't match or if the vote is over)
-            disabled={!((this.state.decisionCreatorId && this.state.currentLoggedInUserId) && (this.state.decisionCreatorId == this.state.currentLoggedInUserId) || (this.state.voteOver))}
+            disabled={
+              !(
+                (this.state.decisionCreatorId &&
+                  this.state.currentLoggedInUserId &&
+                  this.state.decisionCreatorId ==
+                    this.state.currentLoggedInUserId) ||
+                this.state.voteOver
+              )
+            }
             // disabled={!this.state.decisionCreatorId}
             className={
               this.state.revealIsActive ? "active-tab" : "inactive-tab"
