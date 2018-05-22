@@ -29,12 +29,11 @@ class Question extends Component {
       .then(res => {
         // console.log("res", res);
         this.setState({
-          didFetchResultFromServer: true,
           username: res.data.user.username
         });
       })
       .catch(error => {
-        this.setState({ didFetchResultFromServer: true, redirect: true });
+        this.setState({ redirect: true });
       });
 
     axios
@@ -42,13 +41,22 @@ class Question extends Component {
       .then(res => {
         console.log("res", res);
         if (res.data.subscription && res.data.subscription.subscriptionID) {
-          this.setState({ hasSubscriptionID: true });
+          this.setState({
+            hasSubscriptionID: true,
+            didFetchResultFromServer: true
+          });
         } else {
-          this.setState({ hasSubscriptionID: false });
+          this.setState({
+            hasSubscriptionID: false,
+            didFetchResultFromServer: true
+          });
         }
       })
       .catch(error => {
         console.log("error", error.response);
+        this.setState({
+          didFetchResultFromServer: true
+        });
       });
   }
 
