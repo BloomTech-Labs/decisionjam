@@ -41,7 +41,6 @@ class Decision extends Component {
           decision: res.data.decisionText,
           answersArray: res.data.answers.map(x => x.answerText),
           decisionCreatorId: res.data.decisionCreatorId,
-          currentLoggedInUserId: res.data.currentLoggedInUserId,
           voteOver: res.data.voteOver
         });
         // console.log(

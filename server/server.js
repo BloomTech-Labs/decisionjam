@@ -447,8 +447,9 @@ server.get(
 );
 
 mongoose.Promise = global.Promise;
-const connect = mongoose.connect("mongodb://localhost/test");
-//  ('mongodb://sneha.thadani:decisionjam@ds163769.mlab.com:63769/decisionjam');
+const connect = mongoose.connect
+//("mongodb://localhost/test");
+  ('mongodb://sneha.thadani:decisionjam@ds163769.mlab.com:63769/decisionjam');
 
 connect.then(
   () => {

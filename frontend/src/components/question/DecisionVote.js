@@ -9,7 +9,7 @@ class DecisionVote extends Component {
     this.state = {
       error: "",
       answersArray: [],
-      maxVotesPerUser: 0,
+      maxVotesPerUser: 1,
       decisionCode: this.props.decisionCode,
       jwtToken: localStorage.getItem("token")
     };
@@ -27,7 +27,7 @@ class DecisionVote extends Component {
         this.setState({
           decision: res.data.decisionText,
           answersArray: res.data.answers,
-          // maxVotesPerUser: res.data.maxVotesPerUser,
+          maxVotesPerUser: res.data.maxVotesPerUser,
           votesByUser: res.data.votesByUser
         });
       })
@@ -57,8 +57,7 @@ class DecisionVote extends Component {
     };
     axios
       .put(
-        `${ROOT_URL}/api/decision/answer/${answerId}/vote?vote=${upOrDown}`,
-        {},
+        `${ROOT_URL}/api/decision/answer/${answerId}/vote?vote=${upOrDown}`, '',
         { headers }
       )
       .then(res => {
@@ -76,37 +75,34 @@ class DecisionVote extends Component {
     return this.state.votesByUser >= this.state.maxVotesPerUser;
   }
 
+  sendMaxVotes(newValue) {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: this.state.jwtToken
+    };
+    axios
+    .put(`${ROOT_URL}/api/decision/${this.state.decisionCode}/maxVotesPerUser?newValue=${newValue}`, {},
+     { headers })
+    .then(res => {
+      console.log("res", res);
+      this.setState({});
+    })
+    .catch(e => console.log("error"));
+  }
+
   onMaxVotesClickDown = () => {
     const decisionCode = this.state.decisionCode;
     if (this.state.maxVotesPerUser <= 0) {
       return;
     }
-
     this.setState({ maxVotesPerUser: this.state.maxVotesPerUser - 1 });
-
-    console.log(this.state.maxVotesPerUser);
-    // axios
-    //   .put(`${ROOT_URL}/api/decision/${decisionCode}/maxVotesPerUser`)
-    //   .then(res => {
-    //     console.log("res", res);
-    //     this.setState({});
-    //   })
-    //   .catch(e => console.log("error"));
+    this.sendMaxVotes(this.state.maxVotesPerUser - 1);
   };
 
   onMaxVotesClickUp = () => {
     const decisionCode = this.state.decisionCode;
-
     this.setState({ maxVotesPerUser: this.state.maxVotesPerUser + 1 });
-    console.log(this.state.maxVotesPerUser);
-
-    axios
-      .put(`${ROOT_URL}/api/decision/${decisionCode}/maxVotesPerUser`)
-      .then(res => {
-        console.log("res", res);
-        // this.setState({});
-      })
-      .catch(e => console.log("error"));
+    this.sendMaxVotes(this.state.maxVotesPerUser + 1);
   };
 
   render() {

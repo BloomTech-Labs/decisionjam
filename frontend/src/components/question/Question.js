@@ -14,6 +14,7 @@ class Question extends Component {
     didFetchResultFromServer: false,
     username: "",
     hasSubscriptionID: false,
+    maxVotesPerUser: 1,
     headers: {
       "Content-Type": "application/json",
       Authorization: localStorage.getItem("token")
@@ -47,7 +48,7 @@ class Question extends Component {
           });
         } else {
           this.setState({
-            hasSubscriptionID: false,
+            hasSubscriptionID: true,
             didFetchResultFromServer: true
           });
         }
@@ -64,17 +65,23 @@ class Question extends Component {
     this.setState({ decisionText: event.target.value });
   };
 
+  setMaxVotes = event => {
+    this.setState({ maxVotesPerUser: event.target.value });
+  };
+
   createQuestion = event => {
     // console.log("Sending " + this.state.decisionText);
     const postData = {
-      decisionText: this.state.decisionText
+      decisionText: this.state.decisionText,
+      maxVotesPerUser: this.state.maxVotesPerUser
+
     };
     const headers = this.state.headers;
     axios
       .post(`${ROOT_URL}/api/decision/create`, postData, { headers })
       .then(decision => {
         console.log("decision", decision);
-        this.setState({ decisionCode: decision.data.decision.decisionCode });
+        this.setState({ decisionCode: decision.data.decision.decisionCode  });
         this.props.history.push(
           "/decision/decisionCode/" + this.state.decisionCode
         );
@@ -98,6 +105,16 @@ class Question extends Component {
                 type="text"
                 value={this.state.decisionText}
                 onChange={this.setDecisionText}
+              />
+            </div>
+
+            <label className="question-title"> Set max votes for this question </label>
+            <div className="question-input-wrapper">
+              <textarea
+                className="question-input"
+                type="text"
+                value={this.state.maxVotesPerUser}
+                onChange={this.setMaxVotes}
               />
             </div>
             <div>
