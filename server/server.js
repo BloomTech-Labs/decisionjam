@@ -134,7 +134,8 @@ server.post(
 
     newDecision.decisionCode = decisionCode;
     // console.log("newDecision", newDecision);
-    newDecision.decisionCreatorId = req.user._id;
+    newDecision.decisionCreatorId = req.user.username;
+    
     // console.log("decision make is" + newDecision.decisionCreatorId);
     console.log("decisionCode", decisionCode);
     //check the user contains all required data
@@ -309,17 +310,6 @@ server.put(
     }
   }
 );
-
-server.put("/api/decision/:decisionCode/maxVotes", function(req, res) {
-  console.log("req.params", req.params);
-  const decisionCode = req.params.decisionCode;
-  // console.log(decisionCode);
-  Decision.findOne({ decisionCode }).then(decision => {
-    console.log("decision", decision);
-    Decision.updateOne({ decisionCode }), { $set: { maxVotesPerUser } };
-  });
-});
-
 // when react wants to change voteOver from false to true
 server.put(
   "/api/decision/:decisionCode/voteOverUpdate",
@@ -350,6 +340,23 @@ server.put(
     );
   }
 );
+
+server.put("/api/decision/:decisionCode/maxVotesPerUser", 
+  passport.authenticate("jwt", { session: false }),
+  function(req, res) {
+    const decisionCode = req.params.decisionCode;
+    const newValue = req.query.newValue;
+    
+    Decision.findOne({ decisionCode }).then(decision => {
+       if(decision.decisionCreatorId === req.user.username) {
+          Decision.updateOne({ decisionCode }, { $set: { maxVotesPerUser: newValue } })
+                .then(d => res.status(STATUS_OKAY).json(decision),
+                      e => res.status(STATUS_SERVER_ERROR).json({error: "FAiled to update max votes" + " " +e}));  
+        } else {
+          res.status(STATUS_USER_ERROR).json({error: "FAiled to update max votes user is not owner"});  
+        }
+    });
+  });
 
 //gotta convert ugly callback code to beautiful promises
 //http://erikaybar.name/using-es6-promises-with-mongoosejs-queries/
