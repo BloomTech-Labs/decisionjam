@@ -1,22 +1,22 @@
-import React, { Component } from "react";
-import { Redirect } from "react-router-dom";
-import "./SignUp.css";
-import axios from "axios";
+import React, { Component } from 'react';
+import { Redirect } from 'react-router-dom';
+import './SignUp.css';
+import axios from 'axios';
 
-const ROOT_URL = "http://localhost:8000";
+const ROOT_URL = 'http://localhost:8000';
 
 class Signup extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      username: "",
-      email: "",
-      password: "",
+      username: '',
+      email: '',
+      password: '',
       redirect: false,
-      loginError: "",
-      selectedOption: "",
-      url: "",
-      signInCounter: localStorage.setItem("signInCounter", 1)
+      loginError: '',
+      selectedOption: '',
+      url: '',
+      signInCounter: localStorage.setItem('signInCounter', 1)
     };
   }
 
@@ -46,7 +46,7 @@ class Signup extends Component {
         this.setState({ redirect: true });
       })
       .catch(error => {
-        console.log("error", error);
+        console.log('error', error);
         this.setState({ loginError: error.response.data.error });
       });
   };
@@ -56,10 +56,10 @@ class Signup extends Component {
     // console.log("this.props:", this.props);
 
     if (this.state.redirect) {
-      console.log("href", window.location.href);
+      console.log('href', window.location.href);
       let newhref = window.location.href;
-      let newRedirect = newhref.split("?redirect=")[1];
-      console.log("newRedirect", newRedirect);
+      let newRedirect = newhref.split('?redirect=')[1];
+      console.log('newRedirect', newRedirect);
       return <Redirect to={`/signin/?redirect=${newRedirect}`} />;
     }
 
@@ -82,7 +82,8 @@ class Signup extends Component {
             <label>Email </label>
             <div>
               <input
-                type="text"
+                className="email"
+                type="email"
                 name="email"
                 value={this.state.email}
                 onChange={this.handleEmailChange}
@@ -93,7 +94,8 @@ class Signup extends Component {
             <label>Password </label>
             <div>
               <input
-                type="text"
+                className="password"
+                type="password"
                 name="password"
                 value={this.state.password}
                 onChange={this.handlePasswordChange}
