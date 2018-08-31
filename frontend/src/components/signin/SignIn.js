@@ -1,21 +1,21 @@
-import React, { Component } from "react";
-import { Redirect } from "react-router-dom";
-import "./SignIn.css";
-import axios from "axios";
+import React, { Component } from 'react';
+import { Redirect } from 'react-router-dom';
+import './SignIn.css';
+import axios from 'axios';
 
-const ROOT_URL = "http://localhost:8000";
+const ROOT_URL = 'http://localhost:8000';
 
 class Signup extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      username: "",
-      email: "",
-      password: "",
+      username: '',
+      email: '',
+      password: '',
       redirect: false,
-      loginError: "",
+      loginError: '',
       subscriptionID: false,
-      signInCounter: localStorage.getItem("signInCounter")
+      signInCounter: localStorage.getItem('signInCounter')
     };
   }
 
@@ -36,28 +36,28 @@ class Signup extends Component {
     axios
       .post(`${ROOT_URL}/api/login`, User)
       .then(res => {
-        console.log("res.data", res);
+        console.log('res.data', res);
         if (res.data.success) {
-          localStorage.setItem("token", res.data.token);
-          localStorage.setItem("user", res.data.user);
+          localStorage.setItem('token', res.data.token);
+          localStorage.setItem('user', res.data.user);
           if (res.data.subscriptionID) {
             this.setState({ redirect: true, subscriptionID: true });
           } else {
             this.setState({ redirect: true, subscriptionID: false });
           }
         } else {
-          console.log("login error", this.state.loginError);
+          console.log('login error', this.state.loginError);
           this.setState({ loginError: res.data.msg });
         }
       })
       .catch(error => {
-        console.log("error", error.response);
+        console.log('error', error.response);
         this.setState({ loginError: error.response.data.error });
       });
   };
 
   render() {
-    console.log("this.state:", this.state);
+    console.log('this.state:', this.state);
     // console.log("this.props:", this.props);
 
     if (this.state.redirect) {
@@ -69,18 +69,18 @@ class Signup extends Component {
         // console.log("redirect");
         const getQueryString = (field, url) => {
           let href = url ? url : window.location.href;
-          let reg = new RegExp("[?&]" + field + "=([^&#]*)", "i");
+          let reg = new RegExp('[?&]' + field + '=([^&#]*)', 'i');
           let string = reg.exec(href);
-          console.log("string", string);
+          console.log('string', string);
           return string ? string[1] : null;
         };
-        let redirect = getQueryString("redirect");
+        let redirect = getQueryString('redirect');
         // console.log("redirect", redirect);
 
-        localStorage.removeItem("signInCounter");
-        console.log(localStorage.getItem("signInCounter"));
+        localStorage.removeItem('signInCounter');
+        console.log(localStorage.getItem('signInCounter'));
         // go to billing page
-        if (redirect === "undefined" || redirect === null) {
+        if (redirect === 'undefined' || redirect === null) {
           return <Redirect to="/billing" />;
         } else {
           return <Redirect to={redirect} />;
@@ -108,7 +108,8 @@ class Signup extends Component {
             <label>Password</label>
             <div>
               <input
-                type="text"
+                className="password"
+                type="password"
                 name="password"
                 value={this.state.password}
                 onChange={this.handlePasswordChange}
