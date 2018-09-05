@@ -1,15 +1,24 @@
-const bodyParser = require("body-parser");
-const express = require("express");
+const bodyParser = require('body-parser');
+const express = require('express');
 const server = express();
-const mongoose = require("mongoose");
-const User = require("./db/UserModel.js");
-const Decision = require("./db/DecisionModel.js");
-const cors = require("cors");
-const Billing = require("./db/BillingModel.js");
+const mongoose = require('mongoose');
+const User = require('./db/UserModel.js');
+const Decision = require('./db/DecisionModel.js');
+const cors = require('cors');
+const Billing = require('./db/BillingModel.js');
+const Token = require('./db/tokenModel.js');
 
-const jwt = require("jwt-simple");
-const passport = require("passport");
-const config = require("./config/passport.js");
+// sendgrid username and password from config for sending verification email
+require('dotenv').config();
+
+// package to assist with token creation and emailing
+const crypto = require('crypto');
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+const jwt = require('jwt-simple');
+const passport = require('passport');
+const config = require('./config/passport.js');
 
 const STATUS_USER_ERROR = 422;
 const STATUS_SERVER_ERROR = 500;
@@ -21,7 +30,7 @@ server.use(bodyParser.json());
 
 server.use(passport.initialize());
 // pass passport for configuration
-require("./config/passport")(passport);
+require('./config/passport')(passport);
 
 passport.serializeUser(function(user, done) {
   done(null, user);
@@ -30,22 +39,22 @@ passport.serializeUser(function(user, done) {
 passport.deserializeUser(function(user, done) {
   done(null, user);
 });
-const payments = require("./Payments.js");
+const payments = require('./Payments.js');
 payments(server);
 
-server.get("/", function(req, res) {
-  res.status(200).json({ message: "API running" });
+server.get('/', function(req, res) {
+  res.status(200).json({ message: 'API running' });
 });
 
 server.get(
-  "/api/users",
-  passport.authenticate("jwt", { session: false }),
+  '/api/users',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     User.find({}, (err, users) => {
       if (err) {
         res
           .status(STATUS_USER_ERROR)
-          .json({ error: "Could not find the user." });
+          .json({ error: 'Could not find the user.' });
       } else {
         res.status(STATUS_OKAY).json(users);
       }
@@ -53,42 +62,70 @@ server.get(
   }
 );
 
-server.post("/api/users/adduser", function(req, res) {
+server.post('/api/users/adduser', function(req, res) {
   const newUser = new User(req.body);
   //check the user contains all required data
   if (!newUser.username || !newUser.password || !newUser.email) {
-    res.status(400).json({ error: "Missing required information" });
+    res.status(400).json({ error: 'Missing required information' });
     return;
   }
   newUser.save((err, user) => {
     if (err) {
-      if (err.name === "BulkWriteError") {
+      if (err.name === 'BulkWriteError') {
         res
           .status(STATUS_USER_ERROR)
-          .json({ error: "Username already exists.", err });
-      } else if (err.name === "ValidationError") {
+          .json({ error: 'Username already exists.', err });
+      } else if (err.name === 'ValidationError') {
         res.status(STATUS_USER_ERROR).json({
-          error: "Password must be at least 8 characters.",
+          error: 'Password must be at least 8 characters.',
           err
         });
       } else {
         res
           .status(STATUS_USER_ERROR)
-          .json({ error: "Error while adding", err });
+          .json({ error: 'Error while adding', err });
       }
     } else {
-      res.status(STATUS_OKAY).json(user);
+      // res.status(STATUS_OKAY).json(user);
+      // create verification token
+      let token = new Token({
+        _userId: user._id,
+        token: crypto.randomBytes(16).toString('hex')
+      });
+      // save the verification token
+      token.save(err => {
+        if (err) {
+          return res.status(500).json({ error: 'Unable to save token' });
+        }
+        // send the email
+
+        let mailOptions = {
+          to: newUser.email,
+          from: 'no-reply@DecisionJam.com',
+          subject: 'Account Verfication',
+          text:
+            'Hello,\n\n' +
+            'Please verify your account by clicking the link: \nhttp://' +
+            'localhost:8000' +
+            '/api/confirmation/' +
+            '.\n'
+        };
+        sgMail.send(mailOptions);
+        res
+          .status(200)
+          .json('A verification email has been sent to ' + user.email + '.');
+      });
     }
   });
 });
 
 server.post(
-  "/api/decision/create",
-  passport.authenticate("jwt", { session: false }),
+  '/api/decision/create',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     const newDecision = new Decision(req.body);
     // console.log("req.body", req.body);
-    let decisionCode = "feck";
+    let decisionCode = 'feck';
     // console.log(decisionCode);
     let decisionCodeDupe = true;
 
@@ -99,7 +136,7 @@ server.post(
     // a common solution for this as the general pattern i'm trying to cover is very common
     // just have to match it into node async way of doing things
     //getUser(Math.random().toString(36).substr(2, 5));
-    console.log("in loop");
+    console.log('in loop');
     //decisionCodeNotUnique = true;
     console.log(decisionCodeDupe);
     //}
@@ -111,18 +148,18 @@ server.post(
       },
       function(err, result) {
         if (err) {
-          console.log("in err");
+          console.log('in err');
           res
             .status(STATUS_USER_ERROR)
-            .json({ error: "Error while adding", err });
+            .json({ error: 'Error while adding', err });
         }
         if (result) {
-          console.log("result", result);
+          console.log('result', result);
           console.log(
-            "got a duplicate code server should be setup to generate another code"
+            'got a duplicate code server should be setup to generate another code'
           );
         } else {
-          console.log("code must be unique");
+          console.log('code must be unique');
           console.log(decisionCodeDupe);
           decisionCodeDupe = false;
           console.log(decisionCodeDupe);
@@ -139,14 +176,14 @@ server.post(
     newDecision.decisionCreatorId = req.user._id;
 
     // console.log("decision make is" + newDecision.decisionCreatorId);
-    console.log("decisionCode", decisionCode);
+    console.log('decisionCode', decisionCode);
     //check the user contains all required data
 
     newDecision.save((err, decision) => {
       // console.log("decision", decision);
       if (err) {
-        console.log("err", err);
-        res.status(STATUS_USER_ERROR).json({ error: "Error while adding" });
+        console.log('err', err);
+        res.status(STATUS_USER_ERROR).json({ error: 'Error while adding' });
       } else {
         // console.log("decision in else", decision);
         res.status(STATUS_OKAY).json({ decision: decision });
@@ -156,8 +193,8 @@ server.post(
 );
 
 server.get(
-  "/api/decision/:id",
-  passport.authenticate("jwt", { session: false }),
+  '/api/decision/:id',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     const id = req.params.id;
     const userId = req.user.username;
@@ -174,7 +211,7 @@ server.get(
       err =>
         res
           .status(STATUS_NOT_FOUND)
-          .json({ error: "Decision with id " + id + " not found" })
+          .json({ error: 'Decision with id ' + id + ' not found' })
     );
   }
 );
@@ -203,12 +240,12 @@ server.get(
 // );
 
 server.get(
-  "/api/decision/decisionCode/:decisionCode",
-  passport.authenticate("jwt", { session: false }),
+  '/api/decision/decisionCode/:decisionCode',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     const currentLoggedInUserId = req.user
       ? req.user._id
-      : "5b01aeb1abaade1eacdc67ce";
+      : '5b01aeb1abaade1eacdc67ce';
     const decisionCode = req.params.decisionCode;
     // console.log("decisonCode is " + decisionCode);
     // console.log("currentLoggedInUserId Pat", currentLoggedInUserId);
@@ -251,37 +288,37 @@ server.get(
       { $set: { currentLoggedInUserId } }
     ).then(
       result => {
-        console.log("result", result);
+        console.log('result', result);
         Decision.findOne({ decisionCode }).then(decision => {
-          console.log("decision", decision);
+          console.log('decision', decision);
           res.status(STATUS_OKAY).json(decision);
         });
       },
       err => {
-        console.log("err", err);
+        console.log('err', err);
         res.status(STATUS_NOT_FOUND).json({
-          error: "Decision with id " + id + " not updated" + " " + err
+          error: 'Decision with id ' + id + ' not updated' + ' ' + err
         });
       }
     );
   }
 );
 
-server.put("/api/decision/:id/answer", function(req, res) {
+server.put('/api/decision/:id/answer', function(req, res) {
   const id = req.params.id;
-  console.log("id", id);
+  console.log('id', id);
   console.log(`req.body ${req.body.answer}`);
   const answer = req.body.answer; //TODO add with the user id right now only string
   //check if string answer is empty or null
   // https://stackoverflow.com/questions/154059/how-do-you-check-for-an-empty-string-in-javascript
-  console.log("answer", answer);
+  console.log('answer', answer);
   if (!answer) {
-    console.log("answer is blank or undefined");
-    res.status(STATUS_USER_ERROR).json({ error: "Answer cannot be blank" });
+    console.log('answer is blank or undefined');
+    res.status(STATUS_USER_ERROR).json({ error: 'Answer cannot be blank' });
   } else {
     Decision.findOne({ decisionCode: id }).then(
       decision => {
-        console.log("decision.answers", decision.answers);
+        console.log('decision.answers', decision.answers);
         let answers = decision.answers;
         if (answers === undefined) {
           answers = [{ answerText: answer }];
@@ -297,14 +334,14 @@ server.put("/api/decision/:id/answer", function(req, res) {
             .json({ ...decision.toObject(), votesByUser: 0 }),
             err =>
               res.status(STATUS_NOT_FOUND).json({
-                error: "Decision with id " + id + " not updated" + " " + err
+                error: 'Decision with id ' + id + ' not updated' + ' ' + err
               });
         });
       },
       err =>
         res
           .status(STATUS_NOT_FOUND)
-          .json({ error: "Decision with id " + id + " not found" })
+          .json({ error: 'Decision with id ' + id + ' not found' })
     );
   }
 });
@@ -328,8 +365,8 @@ function userVotes(decision, user) {
 }
 
 server.put(
-  "/api/decision/answer/:id/vote",
-  passport.authenticate("jwt", { session: false }),
+  '/api/decision/answer/:id/vote',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     // console.log("req", req);
     const answerId = req.params.id;
@@ -341,33 +378,33 @@ server.put(
 
     if (
       vote === undefined ||
-      (vote.toUpperCase() !== "YES" && vote.toUpperCase() !== "NO")
+      (vote.toUpperCase() !== 'YES' && vote.toUpperCase() !== 'NO')
     ) {
       res
         .status(STATUS_USER_ERROR)
-        .json({ error: "Decision must be yes or no" });
+        .json({ error: 'Decision must be yes or no' });
     } else {
-      Decision.findOne({ "answers._id": answerId })
+      Decision.findOne({ 'answers._id': answerId })
         .then(
           decision => {
             const currentVotes = userVotes(decision, userId);
             // console.log("decision", decision);
-            console.log("decision.answers", decision.answers);
+            console.log('decision.answers', decision.answers);
             let answers = decision.answers;
             const voteForAnswer = answers.find(x => String(x._id) === answerId);
             const upVotes = voteForAnswer.upVotes;
             const downVotes = voteForAnswer.downVotes;
 
-            console.log("voteForAnswer", voteForAnswer);
+            console.log('voteForAnswer', voteForAnswer);
             var voted = false;
             if (
-              vote.toUpperCase() === "YES" &&
+              vote.toUpperCase() === 'YES' &&
               currentVotes < decision.maxVotesPerUser
             ) {
               upVotes.push(userId);
               voted = true;
             } else if (
-              vote.toUpperCase() === "NO" &&
+              vote.toUpperCase() === 'NO' &&
               currentVotes < decision.maxVotesPerUser
             ) {
               downVotes.push(userId);
@@ -375,7 +412,7 @@ server.put(
             }
             if (voted) {
               decision.save().then(d => {
-                console.log("votesbyobectuser", {
+                console.log('votesbyobectuser', {
                   ...d.toObject(),
                   votesByUser: userVotes(d, userId)
                 });
@@ -390,14 +427,14 @@ server.put(
             } else {
               res.status(STATUS_USER_ERROR).json({
                 status:
-                  "User already exceeds max vote count not allowed to vote again"
+                  'User already exceeds max vote count not allowed to vote again'
               });
             }
           },
           err =>
             res
               .status(STATUS_NOT_FOUND)
-              .json({ error: "answer with id " + answerId + " not found" })
+              .json({ error: 'answer with id ' + answerId + ' not found' })
         )
         .catch(e => console.log(e));
     }
@@ -405,8 +442,8 @@ server.put(
 );
 // when react wants to change voteOver from false to true
 server.put(
-  "/api/decision/:decisionCode/voteOverUpdate",
-  passport.authenticate("jwt", { session: false }),
+  '/api/decision/:decisionCode/voteOverUpdate',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     // console.log("req", req);
     const decisionCode = req.params.decisionCode;
@@ -415,30 +452,30 @@ server.put(
     const voteOver = req.body.voteOver; //TODO add with the user id right now only string
     //check if string answer is empty or null
     // https://stackoverflow.com/questions/154059/how-do-you-check-for-an-empty-string-in-javascript
-    console.log("voteOver", voteOver);
+    console.log('voteOver', voteOver);
     Decision.findOne({ decisionCode }).then(
       decision => {
-        console.log("decision in voteover update", decision);
+        console.log('decision in voteover update', decision);
         decision.voteOver = true;
         Decision.updateOne({ decisionCode }, { $set: { voteOver } }).then(
           result => res.status(STATUS_OKAY).json(decision),
           err =>
             res.status(STATUS_NOT_FOUND).json({
-              error: "Decision with id " + id + " not updated" + " " + err
+              error: 'Decision with id ' + id + ' not updated' + ' ' + err
             })
         );
       },
       err =>
         res
           .status(STATUS_NOT_FOUND)
-          .json({ error: "Decision with id " + id + " not found" })
+          .json({ error: 'Decision with id ' + id + ' not found' })
     );
   }
 );
 
 server.put(
-  "/api/decision/:decisionCode/maxVotesPerUser",
-  passport.authenticate("jwt", { session: false }),
+  '/api/decision/:decisionCode/maxVotesPerUser',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     const decisionCode = req.params.decisionCode;
     const newValue = req.query.newValue;
@@ -464,12 +501,12 @@ server.put(
           e =>
             res
               .status(STATUS_SERVER_ERROR)
-              .json({ error: "FAiled to update max votes" + " " + e })
+              .json({ error: 'FAiled to update max votes' + ' ' + e })
         );
       } else {
         res
           .status(STATUS_USER_ERROR)
-          .json({ error: "FAiled to update max votes user is not owner" });
+          .json({ error: 'FAiled to update max votes user is not owner' });
       }
     });
   }
@@ -478,9 +515,9 @@ server.put(
 //gotta convert ugly callback code to beautiful promises
 //http://erikaybar.name/using-es6-promises-with-mongoosejs-queries/
 // route to authenticate a user (POST http://localhost:8080/api/login)
-server.post("/api/login", function(req, res) {
+server.post('/api/login', function(req, res) {
   if (!req.body.username || !req.body.password) {
-    res.status(400).json({ error: "Missing required information" });
+    res.status(400).json({ error: 'Missing required information' });
     return;
   }
   User.findOne(
@@ -488,12 +525,12 @@ server.post("/api/login", function(req, res) {
       $or: [{ email: req.body.email }, { username: req.body.username }]
     },
     function(err, user) {
-      console.log("err:", err);
+      console.log('err:', err);
       if (err) throw err;
       if (!user) {
         res.json({
           success: false,
-          msg: "Authentication failed. User not found."
+          msg: 'Authentication failed. User not found.'
         });
       } else {
         // check if password matches
@@ -502,7 +539,7 @@ server.post("/api/login", function(req, res) {
           console.log(isMatch);
           if (isMatch && !err) {
             // if user is found and password is right create a token
-            var token = jwt.encode(user, "cs5Rocks");
+            var token = jwt.encode(user, 'cs5Rocks');
             // return the information including token as JSON
             Billing.findOne({ username: req.body.username })
               .sort({ subscriptionID: -1 })
@@ -511,14 +548,14 @@ server.post("/api/login", function(req, res) {
                 if (!subscription) {
                   res.json({
                     success: true,
-                    token: "JWT " + token,
+                    token: 'JWT ' + token,
                     subscriptionID: false,
                     user: req.body.username
                   });
                 } else {
                   res.json({
                     success: true,
-                    token: "JWT " + token,
+                    token: 'JWT ' + token,
                     subscriptionID: subscription.subscriptionID,
                     user: req.body.username
                   });
@@ -527,7 +564,7 @@ server.post("/api/login", function(req, res) {
           } else {
             res.json({
               success: false,
-              msg: "Authentication failed. Username or password is incorrect. ",
+              msg: 'Authentication failed. Username or password is incorrect. ',
               err
             });
           }
@@ -541,23 +578,23 @@ server.post("/api/login", function(req, res) {
 
 //see last comment https://stackoverflow.com/questions/45541182/passport-req-logout-function-not-working
 server.get(
-  "/api/logout",
-  passport.authenticate("jwt", { session: false }),
+  '/api/logout',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
-    console.log("I am Logout");
+    console.log('I am Logout');
     req.logout();
-    res.status(200).redirect("/");
+    res.status(200).redirect('/');
   }
 );
 
 //how to setup routes that need auth as well as test it on postman
 //https://jonathanmh.com/express-passport-json-web-token-jwt-authentication-beginners/
 server.get(
-  "/api/routeThatNeedsJWTToken",
-  passport.authenticate("jwt", { session: false }),
+  '/api/routeThatNeedsJWTToken',
+  passport.authenticate('jwt', { session: false }),
   function(req, res) {
     res.json({
-      "Success! You can not see this without a token": "bla",
+      'Success! You can not see this without a token': 'bla',
       user: req.user
     });
   }
@@ -565,7 +602,7 @@ server.get(
 
 mongoose.Promise = global.Promise;
 const connect = mongoose.connect(
-  "mongodb://localhost/test"
+  'mongodb://localhost/test'
   // "mongodb://sneha.thadani:decisionjam@ds163769.mlab.com:63769/decisionjam"
 );
 
@@ -576,6 +613,113 @@ connect.then(
     console.log(`Server Listening on ${port}`);
   },
   err => {
-    console.log("could not connect to MongoDB");
+    console.log('could not connect to MongoDB');
   }
 );
+
+// additional routes for token confirmation and if a user needs to resend a new confirmation
+
+server.post('/api/confirmation', function(req, res, next) {
+  req.assert('email', 'Email is not valid').isEmail();
+  req.assert('email', 'Email cannot be blank').notEmpty();
+  req.assert('token', 'Token cannot be blank').notEmpty();
+  req.sanitize('email').normalizeEmail({ remove_dots: false });
+
+  // Check for validation errors
+  var errors = req.validationErrors();
+  if (errors) return res.status(400).send(errors);
+
+  // Find a matching token
+  Token.findOne({ token: req.body.token }, function(err, token) {
+    if (!token)
+      return res.status(400).send({
+        type: 'not-verified',
+        msg: 'We were unable to find a valid token. Your token my have expired.'
+      });
+
+    // If we found a token, find a matching user
+    User.findOne({ _id: token._userId }, function(err, user) {
+      if (!user)
+        return res
+          .status(400)
+          .send({ msg: 'We were unable to find a user for this token.' });
+      if (user.isVerified)
+        return res.status(400).send({
+          type: 'already-verified',
+          msg: 'This user has already been verified.'
+        });
+
+      // Verify and save the user
+      user.isVerified = true;
+      user.save(function(err) {
+        if (err) {
+          return res.status(500).send({ msg: err.message });
+        }
+        res.status(200).send('The account has been verified. Please log in.');
+      });
+    });
+  });
+});
+
+server.post('/api/resend', function(req, res, next) {
+  req.assert('email', 'Email is not valid').isEmail();
+  req.assert('email', 'Email cannot be blank').notEmpty();
+  req.sanitize('email').normalizeEmail({ remove_dots: false });
+
+  // Check for validation errors
+  var errors = req.validationErrors();
+  if (errors) return res.status(400).send(errors);
+
+  User.findOne({ email: req.body.email }, function(err, user) {
+    if (!user)
+      return res
+        .status(400)
+        .send({ msg: 'We were unable to find a user with that email.' });
+    if (user.isVerified)
+      return res.status(400).send({
+        msg: 'This account has already been verified. Please log in.'
+      });
+
+    // Create a verification token, save it, and send email
+    var token = new Token({
+      _userId: user._id,
+      token: crypto.randomBytes(16).toString('hex')
+    });
+
+    // Save the token
+    token.save(function(err) {
+      if (err) {
+        return res.status(500).send({ msg: err.message });
+      }
+
+      // Send the email
+      var transporter = nodemailer.createTransport({
+        service: 'Sendgrid',
+        auth: {
+          user: process.env.SENDGRID_USERNAME,
+          pass: process.env.SENDGRID_PASSWORD
+        }
+      });
+      var mailOptions = {
+        from: 'no-reply@codemoto.io',
+        to: user.email,
+        subject: 'Account Verification Token',
+        text:
+          'Hello,\n\n' +
+          'Please verify your account by clicking the link: \nhttp://' +
+          req.headers.host +
+          '/confirmation/' +
+          token.token +
+          '.\n'
+      };
+      transporter.sendMail(mailOptions, function(err) {
+        if (err) {
+          return res.status(500).send({ msg: err.message });
+        }
+        res
+          .status(200)
+          .send('A verification email has been sent to ' + user.email + '.');
+      });
+    });
+  });
+});
