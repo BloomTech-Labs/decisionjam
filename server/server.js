@@ -655,6 +655,7 @@ server.get('/api/confirmation/:token', function(req, res) {
         res
           .status(200)
           // redirects to sign-in page on front-end
+          // need to change this re-direct to the deployed url before deploying site again
           .redirect('http://localhost:3000/signin');
       });
     });
